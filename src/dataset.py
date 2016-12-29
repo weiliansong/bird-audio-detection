@@ -7,7 +7,7 @@ import os
 import glob
 import ops
 
-d = 400000 # number of audio samples for learning
+d = 200000 # number of audio samples for learning
 
 basedir = '../data/'
 
