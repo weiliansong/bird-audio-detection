@@ -133,4 +133,4 @@ def main():
 		joblib.dump(clf_linear, save_dir+"svm_linear/svm_linear_pool5_model.pkl") 
 		
 
-main()
+# main()
