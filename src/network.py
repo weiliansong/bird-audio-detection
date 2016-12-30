@@ -60,7 +60,7 @@ def network(net, is_training=True, activation_fn=tf.nn.relu, capacity=1.0, capac
         activation_fn=activation_fn, 
         capacity=capacity)
 
-def network_v6(net, is_training=True, activation_fn=tf.nn.relu,
+def network_v7(net, is_training=True, activation_fn=tf.nn.relu,
         capacity=1.0, capacity2=1.0):
 
     net = tf.reshape(net,(-1,200000,1,1))
@@ -437,7 +437,7 @@ def network_v1(net, is_training=True, activation_fn=tf.nn.relu, capacity=1.0):
         return net 
 
 networks = {
-        'v6':network_v6,
+        'v7':network_v7,
         'v5_1':network_v5_1,
         'v5':network_v5,
         'v4':network_v4,
