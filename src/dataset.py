@@ -150,6 +150,19 @@ def records_challenge(dataset_names=['badchallenge'],
                                 is_training=is_training,
                                 batch_size=batch_size)
 
+# Only for domain confusion!
+def records_domain_confusion(dataset_names=['badchallenge'], 
+        is_training=False, batch_size=64, augment_add=False):
+
+    if augment_add:
+        print('Ignoring augmentation in domain confusion mode')
+
+    return _records(dataset_names=dataset_names,
+                                what_to_grab='all',
+                                augment_add=False,
+                                is_training=is_training,
+                                batch_size=batch_size)
+
 # Load all of ff and warblr, 0-8 only
 def records_train_fold(dataset_names=['freefield1010', 'warblr'], 
         is_training=True, batch_size=64, augment_add=False):

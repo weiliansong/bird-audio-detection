@@ -36,27 +36,44 @@ if not tf.gfile.Exists(FLAGS.summary_dir):
 with tf.variable_scope('Input'):
     print('Defining input pipeline')
 
-    feat, label, recname = dataset.records_train_fold(**dc)
+    s_feat, s_label, s_recname = dataset.records_train_all(
+                                            dataset_names=['freefield1010'],
+                                            batch_size=50,
+                                            **dc)
+    t_feat, t_label, t_recname = dataset.records_train_fold(
+                                            dataset_names=['warblr'],
+                                            batch_size=14,
+                                            **dc)
+    feat = tf.concat(0, [s_feat, t_feat])
 
 with tf.variable_scope('Predictor'):
     print('Defining prediction network')
 
-    logits = network.network(feat,
-            is_training=True,**nc)
+    logits, domain = network.network(feat, is_training=True,**nc)
 
 with tf.variable_scope('Loss'):
     print('Defining loss functions')
 
+    s_logits = tf.slice(logits, [0,0], [50,-1])
+    s_domain = tf.slice(domain, [0,0,0,0], [50,-1,-1,-1])
+    t_domain = tf.slice(domain, [50,0,0,0], [-1,-1,-1,-1])
+
+
+    loss_MMD = tf.matmul( tf.reduce_mean(s_domain, axis=0),
+                          tf.reduce_mean(t_domain, axis=0),
+                          transpose_b=True )
+    loss_MMD = 0.25 * tf.squeeze(loss_MMD)
+
     reg = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
     loss_class = tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits,
-            label)
+            s_logits,
+            s_label)
 
-    prediction = tf.cast(tf.argmax(logits,1),dtype=tf.int32)
+    prediction = tf.cast(tf.argmax(s_logits,1),dtype=tf.int32)
 
     loss_class = 10*tf.reduce_mean(loss_class)
 
-    loss = loss_class + reg 
+    loss = loss_class + loss_MMD + reg 
 
 with tf.variable_scope('Train'):
     print('Defining training methods')
@@ -66,7 +83,7 @@ with tf.variable_scope('Train'):
     optimizer = tf.train.AdamOptimizer(learning_rate,epsilon=.1)
     train_op = optimizer.minimize(loss,global_step=global_step)
 
-    acc = tf.contrib.metrics.accuracy(prediction,label)
+    acc = tf.contrib.metrics.accuracy(prediction,s_label)
 
 with tf.variable_scope('Summaries'):
     print('Defining summaries')
