@@ -96,16 +96,18 @@ def network_v7(net, is_training=True, activation_fn=tf.nn.relu,
         # Domain layer
         domain = slim.conv2d(net,256,[1,1], stride=(1,1))
         # Conv 10
-        net = slim.conv2d(net,2,[1,1], stride=(1,1),
+        net = slim.conv2d(domain,2,[1,1], stride=(1,1),
                 normalizer_fn=None,activation_fn=None)
-
-        print(net)
 
         net = slim.flatten(net,[1])
 
         net = tf.squeeze(net)
 
-        return net, domain
+	if is_training:
+	    return net, domain
+
+	else:
+	    return net
 
 def network_v5(net, is_training=True, activation_fn=tf.nn.relu,
         capacity=1.0, capacity2=1.0):

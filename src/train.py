@@ -9,15 +9,15 @@ import util
 slim = tf.contrib.slim
 
 print('Setting up run')
-nc, dc = util.parse_arguments()
-run_name = util.run_name(nc,dc)
+nc, dc, rc = util.parse_arguments()
+run_name = util.run_name(nc,dc,rc)
 
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string('checkpoint_dir', 'checkpoint/' + run_name + '/','output directory for model checkpoints')
 flags.DEFINE_string('summary_dir', 'logs/' + run_name, 'output directory for training summaries')
 flags.DEFINE_float('gamma',0.5,'learning rate change per step')
-flags.DEFINE_float('learning_rate',0.03,'learning rate change per step')
+flags.DEFINE_float('learning_rate',0.02,'learning rate change per step')
 
 dataset_names = ['freefield1010', 'warblr']
 
@@ -40,10 +40,12 @@ with tf.variable_scope('Input'):
                                             dataset_names=['freefield1010'],
                                             batch_size=50,
                                             **dc)
-    t_feat, t_label, t_recname = dataset.records_train_fold(
+    # Pipeline used for domain confusion
+    t_feat, t_label, t_recname = dataset.records_train_all(
                                             dataset_names=['warblr'],
                                             batch_size=14,
                                             **dc)
+    # Concat things together so we are still at 64 per batch 
     feat = tf.concat(0, [s_feat, t_feat])
 
 with tf.variable_scope('Predictor'):
@@ -54,15 +56,19 @@ with tf.variable_scope('Predictor'):
 with tf.variable_scope('Loss'):
     print('Defining loss functions')
 
+    # We only want to use ff logits for classification loss
     s_logits = tf.slice(logits, [0,0], [50,-1])
+    # Domains for both ff and warblr
     s_domain = tf.slice(domain, [0,0,0,0], [50,-1,-1,-1])
     t_domain = tf.slice(domain, [50,0,0,0], [-1,-1,-1,-1])
 
 
+    # Find mean of each sets of batches of domain, and find the norm squared
+    # distance between them
     loss_MMD = tf.matmul( tf.reduce_mean(s_domain, axis=0),
                           tf.reduce_mean(t_domain, axis=0),
                           transpose_b=True )
-    loss_MMD = 0.25 * tf.squeeze(loss_MMD)
+    loss_MMD = 0.50 * tf.squeeze(loss_MMD)
 
     reg = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
     loss_class = tf.nn.sparse_softmax_cross_entropy_with_logits(
