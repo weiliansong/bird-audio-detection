@@ -61,6 +61,58 @@ def network(net, is_training=True, activation_fn=tf.nn.relu, capacity=1.0, capac
         activation_fn=activation_fn, 
         capacity=capacity)
 
+def network_v8(net, is_training=True, activation_fn=tf.nn.relu,
+        capacity=1.0, capacity2=1.0):
+
+    net = tf.reshape(net,(-1,100000,4,1))
+
+    with slim.arg_scope(network_arg_scope(is_training=is_training,
+        activation_fn=activation_fn)):
+
+        # extract window features
+        net = slim.conv2d(net,np.rint(capacity*32),[3,4],stride=(2,1))
+        net = slim.conv2d(net,np.rint(capacity*32),[9,1],stride=(5,1))
+        net = slim.conv2d(net,np.rint(capacity*64),[9,1],stride=(5,1))
+        #net = slim.dropout(net)
+        net = slim.conv2d(net,np.rint(capacity*128),[9,1],stride=(5,1))
+        #net = slim.dropout(net)
+        net_early = tf.reduce_mean(net,[1],keep_dims=True)
+        net = slim.conv2d(net,np.rint(capacity*128),[9,1],stride=(5,1))
+        #net = slim.dropout(net)
+        net = slim.conv2d(net,np.rint(capacity*256),[9,1],stride=(5,1))
+        #net = slim.dropout(net)
+        net_late = tf.reduce_mean(net,[1],keep_dims=True)
+        net = slim.conv2d(net,np.rint(capacity*256),[3,1],stride=(2,1))
+        #net = slim.dropout(net)
+        net = slim.conv2d(net,np.rint(capacity*512),[3,1],stride=(2,1))
+        #net = slim.dropout(net)
+        net = tf.reduce_mean(net,[1],keep_dims=True)
+        net = tf.concat(3,(net,net_late,net_early))
+
+        # Conv 8
+        net = slim.conv2d(net,512,[1,1], stride=(1,1))
+        #net = slim.dropout(net)
+
+        # Deep Transfer
+        dt = slim.conv2d(net,2,[1,1], stride=(1,1), normalizer_fn=None,
+                activation_fn=None)
+
+        # Conv 9
+        net = slim.conv2d(net,512,[1,1], stride=(1,1))
+        # net = slim.dropout(net)
+
+        # Conv 10
+        net = slim.conv2d(net,2,[1,1], stride=(1,1),
+                normalizer_fn=None,activation_fn=None)
+
+        net = slim.flatten(net,[1])
+        net = tf.squeeze(net)
+
+        dt = slim.flatten(dt,[1])
+        dt = tf.squeeze(dt)
+
+        return net, dt
+
 def network_v6_2(net, is_training=True, activation_fn=tf.nn.relu,
         capacity=1.0, capacity2=1.0):
 
@@ -456,6 +508,7 @@ def network_v1(net, is_training=True, activation_fn=tf.nn.relu, capacity=1.0):
         return net 
 
 networks = {
+        'v8':network_v8,
         'v6.2':network_v6_2,
         'v6.1':network_v6_1,
         'v6':network_v6, # v5 -> adds local normalization, drops skips, reduces capacity

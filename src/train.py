@@ -36,27 +36,35 @@ if not tf.gfile.Exists(FLAGS.summary_dir):
 with tf.variable_scope('Input'):
     print('Defining input pipeline')
 
-    feat, label, recname = dataset.records_train_all(**dc)
+    feat, label, recname, dataset_label = dataset.records_train_all(**dc)
 
 with tf.variable_scope('Predictor'):
     print('Defining prediction network')
 
-    logits = network.network(feat,
-            is_training=True,**nc)
+    logits, dataset_logits = network.network(feat, is_training=True,**nc)
 
 with tf.variable_scope('Loss'):
     print('Defining loss functions')
 
     loss_reg = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
+
     loss_class = tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits,
             label)
 
-    prediction = tf.cast(tf.argmax(logits,1),dtype=tf.int32)
+    loss_discrim = tf.nn.sparse_softmax_cross_entropy_with_logits(
+            dataset_logits,
+            dataset_label)
 
     loss_class = 10*tf.reduce_mean(loss_class)
 
-    loss = loss_class + loss_reg 
+    loss_discrim = tf.reduce_mean(loss_discrim)
+
+    loss_conf = 1 / loss_discrim
+
+    prediction = tf.cast(tf.argmax(logits,1),dtype=tf.int32)
+
+    loss = loss_class + loss_conf + loss_reg 
 
 with tf.variable_scope('Train'):
     print('Defining training methods')
@@ -64,7 +72,29 @@ with tf.variable_scope('Train'):
     global_step = tf.Variable(0,name='global_step',trainable=False)
     learning_rate = tf.train.exponential_decay(FLAGS.learning_rate,global_step,40000,FLAGS.gamma,staircase=True)
     optimizer = tf.train.AdamOptimizer(learning_rate,epsilon=.1)
-    train_op = optimizer.minimize(loss,global_step=global_step)
+
+    model_vars = slim.get_model_variables()
+
+    g_exclude = ['Conv_9', 'Conv_10', 'Conv_11']
+
+    d_var_list = [var for var in model_vars if 'Conv_9' in var.op.name]
+    g_var_list = []
+
+    for var in model_vars:
+        if var.op.name.split('/')[1] not in g_exclude:
+            g_var_list.append(var)
+
+    all_train_op = optimizer.minimize(loss,global_step=global_step)
+
+    d_train_op = optimizer.minimize(loss_discrim, 
+                                    global_step=global_step,
+                                    var_list=d_var_list)
+
+    g_train_op = optimizer.minimize(loss_conf,
+                                    global_step=global_step,
+                                    var_list=g_var_list)
+
+    train_op = tf.group(all_train_op,d_train_op, g_train_op)
 
     acc = tf.contrib.metrics.accuracy(prediction,label)
 
@@ -73,6 +103,8 @@ with tf.variable_scope('Summaries'):
 
     tf.summary.scalar('loss_class', loss_class)
     tf.summary.scalar('loss_reg', loss_reg)
+    tf.summary.scalar('loss_discrim', loss_discrim)
+    tf.summary.scalar('loss_conf', loss_conf)
     tf.summary.scalar('loss', loss)
     tf.summary.scalar('learning_rate', learning_rate)
     tf.summary.scalar('accuracy', acc)
@@ -109,7 +141,7 @@ with tf.Session(config=config) as sess:
     while _i < 300000:
 
         _,_,_i, \
-        _loss,_loss_reg,_loss_class,_acc, \
+        _loss,_loss_reg,_loss_class,_loss_discrim,_loss_conf,_acc, \
         _summary \
         = sess.run([
             train_op,
@@ -118,12 +150,18 @@ with tf.Session(config=config) as sess:
             loss,
             loss_reg,
             loss_class,
+            loss_discrim,
+            loss_conf,
             acc,
             summary
             ])
 
-        print(str(_i) +' : lc ' + str(_loss_class) +' : lr ' +
-                str(_loss_reg) + ' : l ' + str(_loss) + ' : a ' + str(_acc))
+        print(str(_i) +': lc ' + str(_loss_class) 
+                + ': ld ' + str(_loss_discrim) 
+                + ': lg ' + str(_loss_conf) 
+                + ': lr ' + str(_loss_reg) 
+                + ': l ' + str(_loss) 
+                + ': a ' + str(_acc))
 
         summary_writer.add_summary(_summary, _i)
         summary_writer.flush()

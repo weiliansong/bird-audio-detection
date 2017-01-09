@@ -51,7 +51,12 @@ def _load_tensors(name, num_epochs=None):
     recname, label = tf.decode_csv(value,record_defaults=defaults)
     feat = read_and_decode(recname) 
 
-    return feat, label, recname 
+    if 'freefield1010' in name:
+        dataset_label = 0
+    else:
+        dataset_label = 1
+
+    return feat, label, recname, dataset_label 
 
 def _get_names(dataset_name, what_to_grab='train'):
 
@@ -83,8 +88,8 @@ def _augment(tensors, neg_tensors, batch_size=16):
     # same audio files, two different shuffles, add together to form
     # new audio files
 
-    feat, label, recname = tensors
-    neg_feat, neg_label, neg_recname = neg_tensors
+    feat, label, recname, dataset_label = tensors
+    neg_feat, neg_label, neg_recname, neg_dataset_label = neg_tensors
 
     r = tf.random_uniform((batch_size,1))
 
@@ -98,7 +103,7 @@ def _augment(tensors, neg_tensors, batch_size=16):
 
     recname = recname + '|' + neg_recname
 
-    return feat, label, recname
+    return feat, label, recname, dataset_label
 
 def _records(dataset_names=[''], what_to_grab='train', is_training=True, 
         batch_size=64, augment_add=False, num_epochs=None):
