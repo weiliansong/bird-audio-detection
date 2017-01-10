@@ -76,7 +76,7 @@ with tf.variable_scope('Loss'):
 
     loss_conf = 1 / loss_discrim
 
-    prediction = tf.cast(tf.argmax(logits,1),dtype=tf.int32)
+    prediction = tf.cast(tf.argmax(s_logits,1),dtype=tf.int32)
 
     loss = loss_class + loss_conf + loss_reg 
 
@@ -110,7 +110,7 @@ with tf.variable_scope('Train'):
 
     train_op = tf.group(all_train_op,d_train_op, g_train_op)
 
-    acc = tf.contrib.metrics.accuracy(prediction,label)
+    acc = tf.contrib.metrics.accuracy(prediction, s_label)
 
 with tf.variable_scope('Summaries'):
     print('Defining summaries')
