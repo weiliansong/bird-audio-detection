@@ -13,8 +13,10 @@ import dataset
 import network
 import itertools
 import util
+import tensorflow.contrib.slim.nets
 
 slim = tf.contrib.slim
+inception = tf.contrib.slim.nets.inception
 
 #
 # parse inputs 
@@ -46,7 +48,11 @@ with tf.variable_scope('Input'):
 with tf.variable_scope('Predictor'):
     print('Defining prediction network')
 
-    logits = network.network(feat,is_training=False,**nc)
+    with slim.arg_scope(inception.inception_v3_arg_scope()):
+        logits, end_points = inception.inception_v3(
+                                                feat,
+                                                num_classes=2,
+                                                is_training=False)
 
     probs = tf.nn.softmax(logits)
     prediction = tf.cast(tf.argmax(logits,1),dtype=tf.int32)

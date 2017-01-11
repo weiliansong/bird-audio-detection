@@ -2,45 +2,25 @@ from __future__ import division, print_function, absolute_import
 
 import tensorflow as tf
 import numpy as np
-from scipy import signal
-import wave
 import os
 import glob
 import ops
 
-d = 400000 # number of audio samples for learning
-
 basedir = '../data/'
+
+image_mean = np.asarray([123,117,104]).reshape((1,1,3))
 
 def read_and_decode(recname):
 
-    def read_wav(f):
-        try:
-            fid = wave.open(basedir+f+'.wav', "rb")
-            raw = fid.readframes(fid.getnframes())
-            y = np.fromstring(raw,dtype=np.int16).astype(np.float32)
+    feat = tf.read_file(recname)
+    feat = tf.image.decode_jpeg(feat, channels=3)
+    feat = tf.cast(feat, tf.float32)
+    feat = tf.image.resize_images(feat, tf.constant([299,299]))
+    feat -= image_mean
+    feat /= 255
+    feat.set_shape([299,299,3])
 
-            # pad if necessary 
-            amount_short = 400000-y.size
-            if 0 < amount_short:
-                y = np.pad(y, 
-                        (0,amount_short),
-                        'wrap') 
-
-            y = y / 32768.
-            #y = y / np.sqrt(1e-8 + np.mean(y**2))
-            #y = y / 100.
-
-            return y
-        except Exception,e:
-            print(e)
-
-    y = tf.py_func(read_wav, [recname], [tf.float32])
-    y = tf.reshape(y,(-1,1,1))
-    y = tf.random_crop(y,(d,1,1)) 
-    y = tf.squeeze(y)
-
-    return y 
+    return feat
 
 def _load_tensors(name, num_epochs=None):
 
@@ -72,33 +52,33 @@ def _get_names(dataset_name, what_to_grab='train'):
 
     return names
 
-def _augment(tensors, neg_tensors, batch_size=16):
-
-    # SUGGESTION: we used to have code to isolate positives and
-    # negatives then we would use the code below to merge only
-    # positives and negatives.  probably a better strategy is to just
-    # get another stream of negatives and randomly add it in to all
-    # the examples
-
-    # same audio files, two different shuffles, add together to form
-    # new audio files
-
-    feat, label, recname = tensors
-    neg_feat, neg_label, neg_recname = neg_tensors
-
-    r = tf.random_uniform((batch_size,1))
-
-    # r represents the percentage of signal we want to keep
-    # It is a positively skewed data series between 0.25 to 1
-    r = 1 - 0.25 * tf.log(1. + 100*r) / tf.log(101.)
-
-    feat = r*feat + (1-r)*neg_feat
-
-    # Shouldn't need to update label, as augmentation is an "|" operation
-
-    recname = recname + '|' + neg_recname
-
-    return feat, label, recname
+# def _augment(tensors, neg_tensors, batch_size=16):
+# 
+#     # SUGGESTION: we used to have code to isolate positives and
+#     # negatives then we would use the code below to merge only
+#     # positives and negatives.  probably a better strategy is to just
+#     # get another stream of negatives and randomly add it in to all
+#     # the examples
+# 
+#     # same audio files, two different shuffles, add together to form
+#     # new audio files
+# 
+#     feat, label, recname = tensors
+#     neg_feat, neg_label, neg_recname = neg_tensors
+# 
+#     r = tf.random_uniform((batch_size,1))
+# 
+#     # r represents the percentage of signal we want to keep
+#     # It is a positively skewed data series between 0.25 to 1
+#     r = 1 - 0.25 * tf.log(1. + 100*r) / tf.log(101.)
+# 
+#     feat = r*feat + (1-r)*neg_feat
+# 
+#     # Shouldn't need to update label, as augmentation is an "|" operation
+# 
+#     recname = recname + '|' + neg_recname
+# 
+#     return feat, label, recname
 
 def _records(dataset_names=[''], what_to_grab='train', is_training=True, 
         batch_size=64, augment_add=False, num_epochs=None):
@@ -119,13 +99,6 @@ def _records(dataset_names=[''], what_to_grab='train', is_training=True,
                                     batch_size=batch_size,
                                     capacity=1000,
                                     min_after_dequeue=400)
-
-        # randomly perturb the magnitude to attempt to make it less
-        # sensitive to volume differences
-        tensors[0] = tf.mul(
-            tensors[0],
-            tf.random_uniform((batch_size,1),minval=.75,maxval=1.33))
-
     else:
         # no need to shuffle test data
         tensors = tf.train.batch_join(tensors_list, 
@@ -133,13 +106,7 @@ def _records(dataset_names=[''], what_to_grab='train', is_training=True,
                                     allow_smaller_final_batch=True)
 
     if augment_add:
-
-        if not os.path.exists('./dataset/negative_samples.csv'):
-            raise Exception("Negative samples not found, run 'cd dataset' and 'python make_dataset.py' first, then train")
-
-        _neg_tensors = _load_tensors('./dataset/negative_samples.csv')
-        neg_tensors = tf.train.batch(_neg_tensors, batch_size=batch_size)
-        tensors = _augment(tensors, neg_tensors, batch_size=batch_size)
+        raise Exception('Augmentation not implemented in spectrogram!')
 
     return tensors 
 

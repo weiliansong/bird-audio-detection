@@ -19,7 +19,10 @@ flags.DEFINE_string('summary_dir', 'logs/' + run_name, 'output directory for tra
 flags.DEFINE_float('gamma',0.5,'learning rate change per step')
 flags.DEFINE_float('learning_rate',0.03,'learning rate change per step')
 
-dataset_names = ['freefield1010', 'warblr']
+inception = tf.contrib.slim.nets.inception
+
+# Fine-tuning from there
+inception_v3_ckpt = '/u/vul-d1/scratch/wso226/deepcalibration_data/inception_v3.ckpt'
 
 if not tf.gfile.Exists(FLAGS.checkpoint_dir):
     print('Making checkpoint dir')
@@ -41,8 +44,11 @@ with tf.variable_scope('Input'):
 with tf.variable_scope('Predictor'):
     print('Defining prediction network')
 
-    logits = network.network(feat,
-            is_training=True,**nc)
+    with slim.arg_scope(inception.inception_v3_arg_scope()):
+        logits, end_points = inception.inception_v3(
+                                             feat,
+                                             num_classes=2,
+                                             is_training=True)
 
 with tf.variable_scope('Loss'):
     print('Defining loss functions')
