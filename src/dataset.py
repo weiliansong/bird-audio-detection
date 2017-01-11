@@ -51,7 +51,7 @@ def _load_tensors(name, num_epochs=None):
     recname, label = tf.decode_csv(value,record_defaults=defaults)
     feat = read_and_decode(recname) 
 
-    if 'freefield1010' in name:
+    if 'badchallenge' in name:
         dataset_label = 0
     else:
         dataset_label = 1

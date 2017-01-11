@@ -41,12 +41,12 @@ out_file_auc = checkpoint_dir + 'AUC.csv'
 with tf.variable_scope('Input'):
     print('Defining input pipeline')
 
-    feat, label, recname = dataset.records_test_fold(**dc)
+    feat, label, recname, _ = dataset.records_test_fold(dataset_names=['warblr'],**dc)
 
 with tf.variable_scope('Predictor'):
     print('Defining prediction network')
 
-    logits = network.network(feat,is_training=False,**nc)
+    logits, _ = network.network(feat,is_training=False,**nc)
 
     probs = tf.nn.softmax(logits)
     prediction = tf.cast(tf.argmax(logits,1),dtype=tf.int32)

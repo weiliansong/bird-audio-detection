@@ -37,14 +37,13 @@ with tf.variable_scope('Input'):
     print('Defining input pipeline')
 
     s_feat, s_label, s_recname, s_dataset_label = dataset.records_train_all(
-                                    dataset_names=['freefield1010'],
-                                    batch_size=50,
+                                    batch_size=40,
                                     **dc)
 
     t_feat, t_label, t_recname, t_dataset_label = dataset.records_train_all(
-                                    dataset_names=['warblr'],
-                                    batch_size=14,
-                                    **dc)
+                                    dataset_names=['badchallenge'],
+                                    batch_size=24,
+                                    is_training=False)
 
     feat = tf.concat(0, [s_feat, t_feat])
     dataset_label = tf.concat(0, [s_dataset_label, t_dataset_label])
@@ -58,7 +57,7 @@ with tf.variable_scope('Loss'):
     print('Defining loss functions')
 
     # Only source logits for classification loss
-    s_logits = tf.slice(logits, [0,0], [50,-1])
+    s_logits = tf.slice(logits, [0,0], [40,-1])
 
     loss_reg = tf.add_n(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
 
