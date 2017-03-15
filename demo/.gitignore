@@ -1,0 +1,5 @@
+*.pyc
+*.wav
+checkpoint/
+*.swp
+*.png
