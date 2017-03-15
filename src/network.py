@@ -296,6 +296,7 @@ def network_v8(net, is_training=True, activation_fn=tf.nn.relu,
 
     with slim.arg_scope(network_arg_scope(is_training=is_training,
         activation_fn=activation_fn)):
+        import ipdb; ipdb.set_trace()
 
         net_x4 = tf.reshape(net,(-1,100000,4,1))
         net_x2 = tf.reshape(net,(-1,200000,2,1))
@@ -322,7 +323,7 @@ def network_v8(net, is_training=True, activation_fn=tf.nn.relu,
 
         print(energies)
 
-        filts_sup = [tf.concat_v2((a,b),3) for a,b in zip(filts,energies)]
+        filts_sup = [tf.concat(3,(a,b)) for a,b in zip(filts,energies)]
         
         print(filts_sup)
 
@@ -332,7 +333,7 @@ def network_v8(net, is_training=True, activation_fn=tf.nn.relu,
 
         print(pyr_inv)
         
-        net = tf.concat_v2(pyr_inv,3)
+        net = tf.concat(3,pyr_inv)
         net = slim.batch_norm(net)
 
         net = slim.conv2d(net,64,[9,1],stride=(5,1))
