@@ -1,0 +1,201 @@
+\documentclass[10pt,twocolumn,letterpaper]{article}
+
+\usepackage{cvpr} \usepackage{times} \usepackage{epsfig}
+\usepackage{graphicx} \usepackage{amsmath} \usepackage{amssymb}
+
+% Include other packages here, before hyperref.
+
+% If you comment hyperref and then uncomment it, you should delete
+% egpaper.aux before re-running latex.  (Or just hit 'q' on the first latex
+% run, let it finish, and you should be clear).
+\usepackage[breaklinks=true,bookmarks=false]{hyperref}
+
+\cvprfinalcopy % *** Uncomment this line for the final submission
+
+\def\cvprPaperID{****} % *** Enter the CVPR Paper ID here
+\def\httilde{\mbox{\tt\raisebox{-.5ex}{\symbol{126}}}}
+
+% Pages are numbered in submission mode, and unnumbered in camera-ready
+%\ifcvprfinal\pagestyle{empty}\fi
+\setcounter{page}{1} \begin{document}
+
+%%%%%%%%% TITLE
+\title{\LaTeX\ Author Guidelines for CVPR Proceedings}
+
+\author{Weilian Song\\ 
+University of Kentucky\\ 
+{\tt\small
+weilian.song@uky.edu}
+% For a paper whose authors are all at the same institution, omit the
+% following lines up until the closing ``}''.  Additional authors and
+% addresses can be added with ``\and'', just like the second author.  To
+% save space, use either the email address or home page, not both
+\and Nathan Jacobs\\ 
+University of Kentucky\\ 
+{\tt\small jacobs@cs.uky.edu}
+}
+
+\maketitle
+%\thispagestyle{empty}
+
+%%%%%%%%% ABSTRACT
+\begin{abstract} TODO: Make Abstract last \end{abstract}
+
+%%%%%%%%% BODY TEXT
+\section{Introduction}
+
+Acoustic detection of birds in the wild is useful in many biological
+scenarios, including estimation of bird population and species-specific
+acoustic monitoring. Most of the current methods are either manual or
+semiautomatic, requireing labor-intensive processing/tuning.
+
+In response to the need for automatic, tuning-free bird presentce detection
+algorithm, Bird Audio Detection Challenge was created, hosted by Queen Mary
+University of London and other universities. Three datasets were released
+as part of the challenge, and teams across the world compete for the best
+performance on the held-out dataset.
+
+In section 2, we will discuss some of the competition details, including
+the datasets used, task description and the evaluation metrics. Section 3
+will present three methods for bird acoustic detection, two of which are
+our submission to the challenge, and the third one being the best
+performing method submitted by Thomas Grill. Section 4 will discuss the
+evaluation results of the three methods, and Section 5 will present future
+possible work based off of this challenge.
+
+%------------------------------------------------------------------------
+\section{Competition Details}
+
+The Bird Audio Detection Challenge is hosted by Queen Mary University of
+London, in collaboration with the IEEE Signal Processing Society. 
+
+%-------------------------------------------------------------------------
+\subsection{Task Description}
+
+For the challenge, teams have to design a system that takes a short audio
+clip, and returns a binary label denoting the presence/absence of bird
+sound of any kind. Teams are also encouraged to output a continuous,
+probability score in the range of 0 to 1 for evaluation purposes.
+
+%-------------------------------------------------------------------------
+\subsection{Datasets}
+
+Three datasets are provided as part of the challenge.
+
+\textbf{freefield1010:} 7000 excerpts from field recordings around the
+world, gathered by the FreeSound project.
+
+\textbf{Warblr:} Crowdsourced project with many smartphone recordings from
+around the United Kingdom. Very diverse in sound categories, even including
+human bird imitations.
+
+\textbf{Chernobyl:} Dataset created as part of Dr Wood's research into the
+long-term effects of the Chernobyl accident on local ecology. Approximately
+10,000 hours to date
+
+Each dataset contains audio clips of roughly 10 seconds. For the challenge,
+all datasets' audio files are provided, but only \textbf{freefield} and
+\textbf{Warblr}'s labels are given. Held-out dataset consists primarily of
+the \textbf{Chernobyl} dataset, along with some from the other two.
+
+%-------------------------------------------------------------------------
+\subsection{Evaluation Metrics}
+
+To evaluate the performance of a model, we use the standard "Area Under the
+ROC Curve" method, also known as the AUC score.
+
+%-------------------------------------------------------------------------
+\section{Bird Acoustic Detection}
+
+Here we introduce three methods for bird acoustic detection, two of which
+are proposed by us, and the third one being the best performing method by
+Thomas Grill of University of Music and Performing Arts, Vienna. 
+
+%-------------------------------------------------------------------------
+\subsection{Data preparation and augmentation}
+
+All audio clips are 10 seconds, mono at 44100 Hz, which gives us 441000
+frames of audio. We divide all frames by 32768 to convert values of
+individual frames to between -1 and 1, and randomly crop out 400000 frames
+as input to our network.
+
+We also deployed data augmentation techniques. Given one base sound clip,
+positive or negative, and another negative sound clip, we concatenate them
+along the y-axis, with the base clip weighted by a factor \(r\) between 0.25
+and 1, and the negative sound clip weighted by a factor \(1-r\). So we
+have:
+\begin{equation}
+	x_{augmented}=r*x_{signal} + (1-r)*x_{negative}
+\end{equation}
+If \(r\) equals to 1, then there would be no augmentation, and if \(r\)
+equals to 0.25, only 25\% of the base sound clip will be preserved. We
+prevent \(r\) from going below 0.25 to ensure bird sound is still
+detectable after augmentation.
+
+Label for the augmented clip will remain the same as the base clip, as the
+augmentation is an \(|\) process, preserving the original label when \(|\)
+with a negative label.
+
+%-------------------------------------------------------------------------
+\subsection{Method 1}
+
+Our first method resembles basic characteristics of SoundNet and residual
+net. The network is fully convolutional, with one-dimensional convolutions
+followed by nonlinearities (ReLU) layers. This network is suitable for
+audio signals, as it is invariant to translation and allows stacking of
+convolutional layers for detecting high-level features.
+
+Network also has shortcuts from earlier layers of the network to later
+stages, allowing easier gradient back-propagation to early layers of the
+network. See Table 1 for network details.
+
+%------------------------------------------------------------------------
+
+\subsection{Method 2}
+
+Our second method utilizes a series of pooling and convolutional layers to
+extract sets of features from the input audio at different resolutions, and
+concatenate them together before some final convolutional layers.
+
+Network can be divided into three stages. In the first stage, we first
+create two copies of the input, one reshaped to 100000 by 4, and the other
+reshaped to 200000 by 2. \(x_{100000*4}\) is then passed to a convolutional
+layer with kernel size \([3,4]\) while \(x_{200000*2}\) is passed to a
+series of 5 pooling layers, followed by a convolutional layer at the end of
+each pooling layer. Note here that the input of one pooling layer is the
+output of the previous pooling layer, the outputs of the convolutional
+layers serve as features extracted at audio of different resolution.
+
+In the second stage, we combined the outputs of the 6 convolutional layers
+in Stage 1 into one feature vector. First, we find the maximum for each
+convolutional output along the thrid dimension. We denote these as the
+\textit{energies} for each convolutional layer. We then concatenate them
+with their corresponding convolutional output, run each concatenated
+feature vector through a pooling layer of specified size, and concatenate
+all 6 feature vectors into one along the third dimension. Due to different
+lengths of output for the 6 convolutional layers, we pass them through
+pooling layers of different sizes to ensure that they are of the same
+dimension for concatenation.
+
+In the final stage, we pass the output from Stage 2 through 7 additional
+convolutional layers, with a \(max()\) operation between the 4th and 5th
+layer. Final output is then flattened into size (1,2), ready to be used in
+a softmax classification loss function.
+
+%------------------------------------------------------------------------
+
+\subsection{Method 3}
+
+This method is the winning algorithm, submitted by Thomas Grill.
+
+%------------------------------------------------------------------------
+\section{Final copy}
+
+You must include your signed IEEE copyright release form when you submit
+your finished paper. We MUST have this form before your paper can be
+published in the proceedings.
+
+
+{\small \bibliographystyle{ieee} \bibliography{biblio} }
+
+\end{document}
