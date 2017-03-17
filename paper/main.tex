@@ -10,7 +10,7 @@
 		\setlength{\itemsep}{1pt}
 		\setlength{\parskip}{1pt}
 		\setlength{\parsep}{1pt} }
-	{ \end{itemize} }
+	{ \end{enumerate} }
 
 % Include other packages here, before hyperref.
 
@@ -33,8 +33,7 @@
 
 \author{Weilian Song\\ 
 University of Kentucky\\ 
-{\tt\small
-weilian.song@uky.edu}
+{\tt\small weilian.song@uky.edu}
 % For a paper whose authors are all at the same institution, omit the
 % following lines up until the closing ``}''.  Additional authors and
 % addresses can be added with ``\and'', just like the second author.  To
@@ -44,6 +43,8 @@ University of Kentucky\\
 {\tt\small jacobs@cs.uky.edu}
 }
 
+% TODO: Add Tawfiq in without messing up format
+
 \maketitle
 %\thispagestyle{empty}
 
@@ -52,12 +53,12 @@ University of Kentucky\\
 
 	Acoustic detection of birds in the wild is useful in many biological
 	scenarios, including estimation of bird population and species-specific
-	acoustic monitoring. Most of the current methods are either manual or
-	semiautomatic, requiring labor-intensive processing/tuning. We hereby
+	acoustic monitoring. Most of current methods are either manual or
+	semi-automatic, requiring labor-intensive processing/tuning. We hereby
 	present three alternative methods, as part of the Bird Audio Detection
-	Challenge, hosted by Queen Mary University of London. Two methods are of
-	our own submission, with the third one as the winning solution submitted
-	by Thomas Grill. All methods utilize deep learning for automatic,
+	Challenge, hosted by Queen Mary University of London. Two methods are our
+	own submission, with the third one as the winning solution submitted by
+	Thomas Grill. All methods utilize deep neural networks for automatic,
 	tuning-free bird presence detection.
 
 \end{abstract}
@@ -65,37 +66,38 @@ University of Kentucky\\
 %%%%%%%%% BODY TEXT
 \section{Introduction}
 
-Acoustic detection of birds in the wild is useful in many biological
-scenarios, including estimation of bird population and species-specific
-acoustic monitoring. Most of the current methods are either manual or
-semiautomatic, requireing labor-intensive processing/tuning.
+Much biological research relies on bird acoustic detection in audio signals,
+as indicated by \cite{bad}. Over the recent years, a large amount of audio
+data is recorded, but the bird detection methods are often manual or
+semi-automatic, requiring intensive labor or tuning.
 
 In response to the need for automatic, tuning-free bird presentce detection
-algorithm, Bird Audio Detection Challenge was created, hosted by Queen Mary
-University of London and other universities. Three datasets were released
-as part of the challenge, and teams across the world compete for the best
-performance on the held-out dataset.
+algorithm, \textit{Bird Audio Detection Challenge} was created, hosted by
+Queen Mary University of London and other universities. Three datasets were
+released as part of the challenge, and teams across the world compete for
+the best performance on the task of bird audio detection.
 
-In section 2, we will discuss some of the competition details, including
-the datasets used, task description and the evaluation metrics. Section 3
-will present three methods for bird acoustic detection, two of which are
-our submission to the challenge, and the third one being the best
-performing method submitted by Thomas Grill. Section 4 will discuss the
-evaluation results of the three methods, and Section 5 will present future
-possible work based off of this challenge.
+In section 2, we discuss some of the competition details, including the
+datasets used, task description and the evaluation metrics. Section 3
+presents three methods for bird acoustic detection, two of which are our
+submission to the challenge, and the third one being the best performing
+method submitted by Thomas Grill. Section 4 discusses some experiments and
+techniques used to improve the peformance. Section 5 displays the
+evaluation results of the three methods, and section 6 presents future
+possible work with this challenge.
 
 %------------------------------------------------------------------------
 \section{Competition Details}
 
 The Bird Audio Detection Challenge is hosted by Queen Mary University of
-London, in collaboration with the IEEE Signal Processing Society. 
+London, in collaboration with the IEEE Signal Processing Society.
 
 %-------------------------------------------------------------------------
 \subsection{Task Description}
 
 For the challenge, teams have to design a system that takes a short audio
 clip, and returns a binary label denoting the presence/absence of bird
-sound of any kind. Teams are also encouraged to output a continuous,
+sound of any species. Teams are also encouraged to output a continuous,
 probability score in the range of 0 to 1 for evaluation purposes.
 
 %-------------------------------------------------------------------------
@@ -103,21 +105,25 @@ probability score in the range of 0 to 1 for evaluation purposes.
 
 Three datasets are provided as part of the challenge.
 
-\textbf{freefield1010:} 7000 excerpts from field recordings around the
+% TODO: Should FreeSound be italicized?
+
+\textbf{freefield1010:} 7,000 excerpts from field recordings around the
 world, gathered by the FreeSound project.
 
-\textbf{Warblr:} Crowdsourced project with many smartphone recordings from
+\textbf{Warblr:} Crowd-sourced project with many smartphone recordings from
 around the United Kingdom. Very diverse in sound categories, even including
 human bird imitations.
 
-\textbf{Chernobyl:} Dataset created as part of Dr Wood's research into the
-long-term effects of the Chernobyl accident on local ecology. Approximately
-10,000 hours to date
+% TODO: Should link to project be included?
+
+\textbf{Chernobyl:} Part of TREE (Transfer-Exposure-Effects) research
+project. Consists of audio in the Chernobyl Exclusion Zone. 
 
 Each dataset contains audio clips of roughly 10 seconds. For the challenge,
 all datasets' audio files are provided, but only \textbf{freefield} and
 \textbf{Warblr}'s labels are given. Held-out dataset consists primarily of
-the \textbf{Chernobyl} dataset, along with some from the other two.
+the \textbf{Chernobyl} dataset, along with some from \textbf{freefield} and
+\textbf{Warblr}.
 
 %-------------------------------------------------------------------------
 \subsection{Evaluation Metrics}
@@ -126,7 +132,7 @@ To evaluate the performance of a model, we use the standard "Area Under the
 ROC Curve" method, also known as the AUC score.
 
 %-------------------------------------------------------------------------
-\section{Bird Acoustic Detection}
+\section{Methodology}
 
 Here we introduce three methods for bird acoustic detection, two of which
 are proposed by us, and the third one being the best performing method by
@@ -135,18 +141,20 @@ Thomas Grill of University of Music and Performing Arts, Vienna.
 %-------------------------------------------------------------------------
 \subsection{Data preparation}
 
-All audio clips are 10 seconds, mono at 44100 Hz, which gives us 441000
-frames of audio. We divide all frames by 32768 to convert values of
-individual frames to between -1 and 1, and randomly crop out 400000 frames
-as input to our network.
+All individual audio clips are 10 seconds, mono at 44,100 Hz, which gives us
+441,000 frames of audio. We divide all frames by 32,768 to convert values of
+individual frames to between -1 and 1, and randomly crop out 400,000
+continuous frames, resulting in a one-dimensional vector with length 400,000
+as our input to the network.
 
 %-------------------------------------------------------------------------
 \subsection{Method 1}
 
-Our first method resembles basic characteristics of SoundNet and residual
-net. The network is fully convolutional, with one-dimensional convolutions
-followed by nonlinearities (ReLU) layers. This network is suitable for
-audio signals, as it is invariant to translation and allows stacking of
+Our first method resembles basic characteristics of SoundNet by Aytar et
+al.\cite{soundnet} and Residual Net by He et al.\cite{residual_net}. The
+network is fully convolutional, with one-dimensional convolutions followed
+by nonlinearities (ReLU) layers.  This network is suitable for audio
+signals, as it is invariant to translation and allows stacking of
 convolutional layers for detecting high-level features.
 
 Network also has shortcuts from earlier layers of the network to later
@@ -156,8 +164,8 @@ network. See Figure 1 for network details.
 \begin{figure}[t]
 	\centering
 	\includegraphics[width=0.5\textwidth]{v5_diagram}
-	\caption{Network v5 Architecture. Content with box refers to kernel size,
-	number of filters, and stride size}
+	\caption{Network v5 Architecture. Content within convolutional blocks
+	refers to kernel size, number of filters, and stride size}
 \end{figure}
 
 %------------------------------------------------------------------------
@@ -169,29 +177,29 @@ extract sets of features from the input audio at different resolutions, and
 concatenate them together before some final convolutional layers.
 
 Network can be divided into three stages. In the first stage, we first
-create two copies of the input, one reshaped to 100000 by 4, and the other
-reshaped to 200000 by 2. \(x_{100000*4}\) is then passed to a convolutional
-layer with kernel size \([3,4]\) while \(x_{200000*2}\) is passed to a
-series of 5 pooling layers, followed by a convolutional layer at the end of
-each pooling layer. Note here that the input of one pooling layer is the
-output of the previous pooling layer, the outputs of the convolutional
-layers serve as features extracted at audio of different resolution.
+create two copies of the input, one reshaped to 100,000 by 4, and the other
+reshaped to 200,000 by 2. \(x_{100,000*4}\) is then passed through a single
+convolutional layer while \(x_{200,000*2}\) is passed through a series of 5
+pooling layers, followed by a convolutional layer at the end of each
+pooling layer. Note here that the input of one pooling layer is the output
+of the previous pooling layer, the outputs of the convolutional layers
+serve as features extracted at input of different resolution.
 
 In the second stage, we combined the outputs of the 6 convolutional layers
 in Stage 1 into one feature vector. First, we find the maximum for each
-convolutional output along the thrid dimension. We denote these as the
-\textit{energies} for each convolutional layer. We then concatenate them
-with their corresponding convolutional output, run each concatenated
-feature vector through a pooling layer of specified size, and concatenate
-all 6 feature vectors into one along the third dimension. Due to different
-lengths of output for the 6 convolutional layers, we pass them through
-pooling layers of different sizes to ensure that they are of the same
-dimension for concatenation.
+convolutional output. We denote them as the energy for each convolutional
+layer. We then concatenate them with their corresponding convolutional
+output, pass each concatenated feature vector through a pooling layer of
+specified size, and concatenate all 6 feature vectors into one. Due to
+different lengths of output for the 6 convolutional layers in stage 1, we
+pass them through pooling layers of different sizes to ensure that they are
+of the same dimension for concatenation.
 
-In the final stage, we pass the output from Stage 2 through 7 additional
-convolutional layers, with a \(max()\) operation between the 4th and 5th
-layer. Final output is then flattened into size (1,2), ready to be used in
-a softmax classification loss function.
+In the final stage, we pass the output from Stage 2 through a batch
+normalization layer, followed by 7 additional convolutional layers, with a
+\(max()\) operation between the 4th and 5th layer. Final output is then
+flattened into size (1,2), ready to be used in a softmax classification
+loss function.
 
 \begin{figure*}
 	\centering
@@ -206,76 +214,85 @@ a softmax classification loss function.
 
 % TODO: Explain that spectrograms were used during training
 
-This method is the winning algorithm of the challenge, submitted by Thomas
-Grill. The neural network used consists of 4 convolutional layers with
-pooling, and 2 dense layers. Multiple signal pre-processing techniques were
-used, including silence/noise trimming, and a different data augmentation
-technique involving shifting the spectra in time and frequency.
-Pseudo-labeling and bagging techniques are also deployed, which we will
-discuss in section 4.
+This method is the winning algorithm to the challenge, submitted by Thomas
+Grill. The neural network uses processed spectrograms of audio clips as
+input, instead of a one-dimensional vector of signals.The network consists
+of 4 convolutional layers with pooling, and 2 dense layers. Multiple signal
+pre-processing techniques are used, including silence/noise trimming, and a
+different data augmentation technique involving shifting the spectrograms
+in time and frequency.  Pseudo-labeling and bagging techniques are also
+deployed, which we will discuss in section 4.
 
 %------------------------------------------------------------------------
 \section{Experiments}
 
-During our development and training of the network, we experimented with
-various pre- and postprocessing techniques, as well as some training
-strategies.
+During our development, we experimented with various pre- and
+postprocessing techniques, as well as some training strategies.
 
 %------------------------------------------------------------------------
 \subsection{Implementation Details}
 
-The given labeled data from both dataset is split into 10 folds. Within
+The given labeled data from both datasets is split into 10 folds. Within
 each fold, number of positive and negative samples are balanced. During
-training, number of samples loaded from each dataset are also balanced, to
+training, number of samples loaded from each datasets are also balanced, to
 ensure no bias.
 
-For in-house testing, 9 folds are used for training and 1 folf for testing.
+For in-house testing, 9 folds are used for training and 1 fold for testing.
 For submission, all 10 folds are used for training.
 
-For our method 1 and 2, we implemented them in python with Tensorflow
-machine learning library. We trained from scratch, with learning rate of
-0.03, learning rate decay by a factor of 0.1 every 40000 iterations, and a
-total of 300000 iterations.
+For method 1 and 2, we implemented them in python with Tensorflow machine
+learning library. We trained from scratch, with learning rate of 0.03,
+learning rate decay by a factor of 0.1 every 40,000 iterations, and a total
+of 300,000 iterations.
+
+For method 3, code base is available online at...
+
+% TODO: How to include code base link?
 
 %------------------------------------------------------------------------
 \subsection{Data Augmentation}
 
-We deployed data augmentation as our only pre-processing technique. Given
-one base sound clip, positive or negative, and another negative sound clip,
-we concatenate them along the y-axis, with the base clip weighted by a
-factor \(r\) between 0.25 and 1, and the negative sound clip weighted by a
-factor \(1-r\). So we have:
+We deploy data augmentation as our only pre-processing technique for method
+1 and 2. Given one base sound clip, positive or negative (bird
+present/absent), and another negative sound clip, we concatenate them along
+the y-axis, with the base clip weighted by a factor \(r\) between 0.25 and
+1, and the negative sound clip weighted by a factor \(1-r\). So we have:
 \begin{equation}
-	x_{augmented}=r*x_{signal} + (1-r)*x_{negative}
+	x_{augmented}=r*x_{base} + (1-r)*x_{negative}
 \end{equation}
 If \(r\) equals to 1, then there would be no augmentation, and if \(r\)
 equals to 0.25, only 25\% of the base sound clip will be preserved. We
-prevent \(r\) from going below 0.25 to ensure bird sound is still
-detectable after augmentation.
+sample \(r\) on a positively skewed interval (0.25,1) to ensure most bird
+sounds in augmented clips are still detectable.
 
 Label for the augmented clip will remain the same as the base clip, as the
-augmentation is an \(|\) process, preserving the original label when \(|\)
-with a negative label.
+augmentation is an \textit{or} process, preserving the original label when 
+\textit{or} with a negative label.
 
 %------------------------------------------------------------------------
 \subsection{Reducing capacity}
 
 One main difficulty we faced is the small size of training data. With no
 regularization, our networks consistently over-fit to the training data,
-perform near perfect on training and our own hold-out test data, but
-perform poorly on the challenge data. To compensate for the lack of data,
-we reduce the capacity of our models by reducing the number of filters for
-each convolutional layer. We do so until the network cannot perform
-perfectly on the training and testing data.
+perform near perfect on training and our own held-out test data, but
+perform poorly on the challenge data. To compensate this, we reduce the
+capacity of our models by reducing the number of filters for each
+convolutional layer. We do so until the network cannot perform perfectly on
+the training and testing data.
 
 %------------------------------------------------------------------------
 \subsection{Prediction Bagging}
 
-This post-processing technique averages prediction scores from many models.
-Due to the random cropping of audio signals during the data loading phase,
-different evaluation of the same audio clip will yield slightly different
-results. Therefore we predict 100 sets of scores for the held-out challenge
-dataset, and average them to obtain one set of scores that was submitted.
+This post-processing technique averages prediction scores from many
+sessions. Due to the random cropping of audio signals during the data
+loading phase, different evaluation of the same audio clip will yield
+slightly different results. Therefore we predict 100 sets of scores for the
+held-out challenge dataset, and average them to obtain one set of scores
+that was submitted.
+
+For method 3, instead of averaging sets of output scores from the same
+model, different models' outputs were averaged. Please refer to Grill's
+code base for more details.
 
 %------------------------------------------------------------------------
 \subsection{Domain Confusion}
@@ -283,13 +300,13 @@ dataset, and average them to obtain one set of scores that was submitted.
 % TODO Consult with Dr. Jacobs on whether this should be mentioned or not
 
 This training strategy addresses the issue of dataset bias. It is apparent
-that the three given datasets have disjoint domains. In addition, within
-each dataset, data is skewed either towards mostly positive samples or
-mostly negative ones. During training, it is very likely that the network
-will cheat by identifying which dataset the clip is from, and make its
-prediction based off of that information. In response, we take the audio
-features near the end of the network, pass it through another convolutional
-layer, and... 
+that the three given datasets have disjoint sound domains. In addition,
+within each dataset, data is skewed either towards mostly positive samples
+or mostly negative ones. During training, it is very likely that the
+network will cheat by identifying which dataset the clip is from, and make
+its prediction based off of that information. In response, we take the
+audio features near the end of the network, pass it through another
+convolutional layer, and... 
 
 %------------------------------------------------------------------------
 \subsection{Pseudo Labeling}
@@ -302,11 +319,15 @@ fine-tuning. Basic procedures are:
 \begin{alt_enumerate}
 	\item{Train a model with only labeled data}
 	\item{Predict scores of the held-out challenge dataset}
-	\item{Find threshold where within it, predictions are accurate enough to
-		be used as extra labels}
+	\item{Find threshold \(r\) such that predictions within range\\
+		\(0<r \cup (1-r)<1\) are accurate enough}
 	\item{Add all predictions within threshold, and retrain or fine-tune
 		network}
 \end{alt_enumerate}
+
+\(r\) can be obtained through manual spot-checking of the predictions. Too
+much time spend on finding the threshold will defeat the purpose of the
+challenge.
 
 %------------------------------------------------------------------------
 \section{Results}
@@ -330,17 +351,22 @@ Below are the final AUC scores for each of the 3 methods:\\
 
 For method 1 and 2, no signal pre-processing techniques were deployed,
 resulting in very noisy inputs to our network. It will be interesting to
-find out if pre-processing will aid the prediction accuracy of our network.
+find out if pre-processing will aid the prediction accuracy of our two
+networks.
 
 %------------------------------------------------------------------------
 \section{Conclusion}
 
 Bird acoustic detection is an important task for many biological
-applications, and the challenge has advanced this field in many ways. We
-presented three methods, first two with a focus on unique network
+applications, but the massive amount of data available makes it difficult
+to extract any useful information from it. The Bird Audio Detection
+challenge has advanced this field in many ways, and many excellent
+automatic, tuning-free bird acoustic detection algorithms are introduced.
+We presented three methods, first two with a focus on unique network
 architecture, and the third one as the embodiment of many years of machine
-listening research by Thomas Grill. Many topics are still open for
-research, like bird species identification and detection. 
+listening research.  Many topics are still open for research, including
+many tasks that already have a solution, but only achieved through manual
+or labor intensive.
 
 %------------------------------------------------------------------------
 

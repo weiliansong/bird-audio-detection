@@ -12,7 +12,7 @@ CONTINUOUS=-pvc
 
 MAIN=main
 SOURCES=$(MAIN).tex Makefile
-FIGURES := $(shell find figs/* -type f)
+FIGURES := $(shell find figures/* -type f)
 
 all: $(MAIN).pdf
 
